@@ -6,6 +6,7 @@ import os
 from aiohttp import web
 from .loggers import setup_loggers
 from .routes import setup_routes
+from .signal_handlers import setup_signal_handlers
 
 
 def init_app():
@@ -17,6 +18,7 @@ def init_app():
         setup_loggers()
 
     setup_routes(app)
+    setup_signal_handlers(app)
 
     return app
 
