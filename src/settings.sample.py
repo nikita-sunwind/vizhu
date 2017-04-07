@@ -1,0 +1,2 @@
+'''Settings of vizhu application
+'''
