@@ -6,7 +6,7 @@ from invoke import task
 
 
 @task
-def checks(ctx):
+def check(ctx):
     '''Run code checks: flake8 and pylint
     '''
     sources = 'src test tasks.py'
@@ -24,7 +24,7 @@ def checks(ctx):
 
 
 @task
-def tests(ctx):
+def test(ctx):
     '''Run imperative test suit: pytest
     '''
     ctx.run(
