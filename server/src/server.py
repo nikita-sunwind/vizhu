@@ -6,6 +6,7 @@ import os
 from aiohttp import web
 from .loggers import setup_loggers
 from .routes import setup_routes
+from .settings import SERVER_PORT
 from .signal_handlers import setup_signal_handlers
 
 
@@ -24,4 +25,4 @@ def init_app():
 
 
 if __name__ == '__main__':
-    web.run_app(init_app(), host='localhost', port=8080)
+    web.run_app(init_app(), host='localhost', port=SERVER_PORT)

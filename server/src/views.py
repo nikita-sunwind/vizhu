@@ -41,6 +41,18 @@ async def load_event(request):
     # Timestamp may be set by user or we will set current time automatically
     _timestamp = float(user_data.pop('_timestamp', time()))
 
+    try:
+        forbidden_name = next(
+            field_name for field_name in user_data.keys()
+            if field_name.startswith('_'))
+    except StopIteration:
+        pass
+    else:
+        return web.Response(
+            status=400,
+            text='field names starting with "_" are reserved, '
+                 'please check "{}"'.format(forbidden_name))
+
     # All remaining fields become user-defined data. It will be serialized
     # into JSON string and stored into _data column
     _data = dumps(user_data)

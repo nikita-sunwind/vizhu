@@ -3,7 +3,11 @@
 
 import time
 from requests import exceptions, get
+import src.settings as settings
 
+
+VIZHU_SERVER_URL = 'http://localhost:{}'.format(settings.SERVER_PORT)
+EVENTS_URL = '{}/events'.format(VIZHU_SERVER_URL)
 
 CONTENT_TYPE = {'Content-Type': 'application/json'}
 
@@ -25,8 +29,7 @@ def wait_for_server(url):
 def unzip_test_cases(test_cases):
     '''Unzip test cases into two lists: test IDs and argvalues
     '''
-    unzipped = zip(*test_cases)
-    ids = next(unzipped)
-    argvalues = next(unzipped)
+    ids = [test_case[0] for test_case in test_cases]
+    argvalues = [test_case[1:] for test_case in test_cases]
 
     return (ids, argvalues)
