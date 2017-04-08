@@ -22,6 +22,8 @@ def wait_for_server(url):
             print('Server at {} is not ready, sleeping for 1 second...'.format(
                 url))
             time.sleep(1)
+        else:
+            break
 
     print('Server at {} is ready'.format(url))
 

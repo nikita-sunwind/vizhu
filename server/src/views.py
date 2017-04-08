@@ -99,13 +99,16 @@ async def query_events(request):
     await response.prepare(request)
 
     response.write('['.encode('utf-8'))
-    for event in db_query:
+    for position, event in enumerate(db_query):
+
+        if position > 0:
+            response.write(','.encode('utf-8'))
 
         user_data = loads(event._data)
 
         # If no columns requested, return all available fields
         if not columns:
-            columns = event_attrs.keys() + user_data.keys()
+            columns = event_attrs.keys() + list(user_data.keys())
 
         row = {}
         for column in columns:
