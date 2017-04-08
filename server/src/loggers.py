@@ -19,7 +19,7 @@ def setup_loggers():
     }
 
     loggers = [
-        'asyncio',
+        # 'asyncio',
         'aiohttp.access',
         'aiohttp.client',
         'aiohttp.internal',
