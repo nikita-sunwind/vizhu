@@ -24,8 +24,8 @@ async def load_event(request):
     '''Load event data into the database
     '''
     user_data = await request.json()
-    print(user_data)
 
+    # Event ID may be set by user or we will set UUIDv4 automatically
     _id = str(user_data.pop('_id', uuid4()))
 
     try:
@@ -38,7 +38,11 @@ async def load_event(request):
     except KeyError:
         return web.Response(status=400, text='_agent name is required')
 
+    # Timestamp may be set by user or we will set current time automatically
     _timestamp = float(user_data.pop('_timestamp', time()))
+
+    # All remaining fields become user-defined data. It will be serialized
+    # into JSON string and stored into _data column
     _data = dumps(user_data)
 
     event = Event(
@@ -58,6 +62,8 @@ async def query_events(request):
     session = request.app['Session']()
     db_query = session.query(Event)
 
+    # All query options are optional
+
     if 'id' in request.query:
         db_query = db_query.filter(Event._id == request.query['id'])
 
@@ -76,21 +82,32 @@ async def query_events(request):
     columns = request.query.getall('columns', None)
     event_attrs = Event.__mapper__.attrs
 
-    output = []
+    # Stream response, send data in chuncks - one event per chunk
+    response = web.StreamResponse(status=200)
+    await response.prepare(request)
+
+    response.write('['.encode('utf-8'))
     for event in db_query:
 
         user_data = loads(event._data)
 
+        # If no columns requested, return all available fields
         if not columns:
             columns = event_attrs.keys() + user_data.keys()
 
         row = {}
         for column in columns:
             if column in event_attrs.keys():
+                # Columns from reserved fields
                 row[column] = getattr(event, column)
             else:
+                # Columns from user-defined data fields, None if does not exist
                 row[column] = user_data.get(column, None)
 
-        output.append(row)
+        response.write(dumps(row).encode('utf-8'))
+        await response.drain()
 
-    return web.Response(status=200, text=dumps(output))
+    response.write(']'.encode('utf-8'))
+    await response.drain()
+
+    return response
