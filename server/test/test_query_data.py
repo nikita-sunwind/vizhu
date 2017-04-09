@@ -33,6 +33,7 @@ class TestQueryData:
 
         ('can-query-data-without-filters',
          {
+             'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
          None),
@@ -91,7 +92,7 @@ class TestQueryData:
              'columns': ['_id', 'weird_column'],
          },
          200,
-         None),
+         None,),
 
     ]
 
@@ -146,3 +147,6 @@ class TestQueryData:
             # Existing but not selected columns must not be included
             for column in existing_columns - columns:
                 assert column not in event
+
+            # _data column must not be included
+            assert '_data' not in event

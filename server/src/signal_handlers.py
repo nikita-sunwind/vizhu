@@ -1,6 +1,7 @@
 '''Signal handlers
 '''
 
+import os
 from time import time
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -16,7 +17,8 @@ async def init_db(app, session_name='unnamed'):
     db_filename = '{}_{}.sqlite3'.format(timestamp, session_name)
     db_path = DATA_DIR / db_filename
 
-    engine = create_engine('sqlite:///{}'.format(db_path), echo=True)
+    debug_mode = 'DEBUG' in os.environ
+    engine = create_engine('sqlite:///{}'.format(db_path), echo=debug_mode)
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)

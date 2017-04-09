@@ -1,13 +1,14 @@
-# pylint: disable=protected-access,no-member
+# pylint: disable=protected-access
 
 '''Server view handlers
 '''
 
-from json import loads, dumps
+from json import dumps
 from json.decoder import JSONDecodeError
 from time import time
 from uuid import uuid4
 from aiohttp import web
+from .exports import export_to_json, export_to_csv
 from .models import Event
 from .settings import STATIC_DIR
 from .signal_handlers import init_db
@@ -94,39 +95,17 @@ async def query_events(request):
     if 'till' in request.query:
         db_query = db_query.filter(Event._timestamp <= request.query['till'])
 
-    columns = request.query.getall('columns', None)
-    event_attrs = Event.__mapper__.attrs
+    # If export format isn't requested explicitly assume JSON
+    export_format = request.query.get('format', 'json')
 
-    # Stream response, send data in chuncks - one event per chunk
-    response = web.StreamResponse(status=200)
-    await response.prepare(request)
-
-    response.write('['.encode('utf-8'))
-    for position, event in enumerate(db_query):
-
-        if position > 0:
-            response.write(','.encode('utf-8'))
-
-        user_data = loads(event._data)
-
-        # If no columns requested, return all available fields
-        if not columns:
-            columns = event_attrs.keys() + list(user_data.keys())
-
-        row = {}
-        for column in columns:
-            if column in event_attrs.keys():
-                # Columns from reserved fields
-                row[column] = getattr(event, column)
-            else:
-                # Columns from user-defined data fields, None if does not exist
-                row[column] = user_data.get(column, None)
-
-        response.write(dumps(row).encode('utf-8'))
-        await response.drain()
-
-    response.write(']'.encode('utf-8'))
-    await response.drain()
+    if export_format == 'json':
+        response = await export_to_json(request, db_query)
+    elif export_format == 'csv':
+        response = await export_to_csv(request, db_query)
+    else:
+        return web.Response(
+            status=400,
+            text='unknown export format "{}"'.format(export_format))
 
     return response
 

@@ -17,7 +17,7 @@ class Event(Base):
     _series = Column(String, nullable=False)
     _agent = Column(String, nullable=False)
     _timestamp = Column(Float)
-    _data = Column(String)
+    _data = Column(String, nullable=False)
 
     def __repr__(self):
         '''Model instance representation
