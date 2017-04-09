@@ -4,26 +4,29 @@
 '''
 
 from json import loads, dumps
-from pathlib import Path
+from json.decoder import JSONDecodeError
 from time import time
 from uuid import uuid4
 from aiohttp import web
 from .models import Event
-
-
-STATIC_PATH = Path.cwd().parent / 'client' / 'dist'
+from .settings import STATIC_DIR
+from .signal_handlers import init_db
 
 
 async def index(_):
     '''Serve index route: return static file index.html
     '''
-    return web.FileResponse(STATIC_PATH / 'index.html')
+    return web.FileResponse(STATIC_DIR / 'index.html')
 
 
 async def load_event(request):
     '''Load event data into the database
     '''
-    user_data = await request.json()
+    try:
+        user_data = await request.json()
+    except JSONDecodeError:
+        return web.Response(
+            status=400, text='request body is not a valid JSON text')
 
     # Event ID may be set by user or we will set UUIDv4 automatically
     _id = str(user_data.pop('_id', uuid4()))
@@ -126,3 +129,18 @@ async def query_events(request):
     await response.drain()
 
     return response
+
+
+async def restart(request):
+    '''Restart logging session: Create new database file
+    '''
+    try:
+        user_data = await request.json()
+    except JSONDecodeError:
+        session_name = 'unnamed'
+    else:
+        session_name = user_data.get('_name', 'unnamed')
+
+    timestamp = await init_db(request.app, session_name=session_name)
+
+    return web.Response(status=200, text=dumps({'_timestamp': timestamp}))

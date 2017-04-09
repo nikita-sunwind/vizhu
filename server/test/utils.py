@@ -6,8 +6,9 @@ from requests import exceptions, get
 import src.settings as settings
 
 
-VIZHU_SERVER_URL = 'http://localhost:{}'.format(settings.SERVER_PORT)
-EVENTS_URL = '{}/events'.format(VIZHU_SERVER_URL)
+SERVER_URL = 'http://localhost:{}'.format(settings.SERVER_PORT)
+EVENTS_URL = '{}/events'.format(SERVER_URL)
+RESTART_URL = '{}/restart'.format(SERVER_URL)
 
 CONTENT_TYPE = {'Content-Type': 'application/json'}
 

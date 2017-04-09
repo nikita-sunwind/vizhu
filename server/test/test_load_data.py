@@ -70,6 +70,11 @@ class TestLoadData:
          'field names starting with "_" are reserved, '
          'please check "_roundtrip_delay"'),
 
+        ('body-must-be-valid-json-text',
+         None,
+         400,
+         'request body is not a valid JSON text'),
+
     ]
 
     ids, argvalues = unzip_test_cases(action_cases)
@@ -77,7 +82,12 @@ class TestLoadData:
     @mark.parametrize('payload,code,message', argvalues, ids=ids)
     def test_load_event(self, payload, code, message):
 
-        response = post(EVENTS_URL, data=dumps(payload))
+        if payload:
+            data = dumps(payload)
+        else:
+            data = None
+
+        response = post(EVENTS_URL, data=data)
 
         assert response.status_code == code
 

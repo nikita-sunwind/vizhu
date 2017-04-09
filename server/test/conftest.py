@@ -5,7 +5,7 @@
 
 import subprocess
 from pytest import yield_fixture
-from test.utils import VIZHU_SERVER_URL, wait_for_server
+from test.utils import SERVER_URL, wait_for_server
 
 
 @yield_fixture(scope='session')
@@ -15,7 +15,7 @@ def fx_api_server():
     args = ['python', '-m', 'src.server']
     devnull = open('/dev/null', 'w')
     server = subprocess.Popen(args, stdout=devnull)
-    wait_for_server(VIZHU_SERVER_URL)
+    wait_for_server(SERVER_URL)
 
     yield
 
