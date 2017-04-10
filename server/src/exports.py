@@ -87,11 +87,11 @@ async def export_to_csv(request, db_query):
 
     for position, event in enumerate(db_query):
 
-        buffer = StringIO()
         user_data = loads(event._data)
 
         # For CSV we have to output the same columns set for all rows
         if position == 0:
+            buffer = StringIO()
             columns = get_columns(request, user_data)
             writer = DictWriter(buffer, fieldnames=columns)
 
@@ -102,7 +102,11 @@ async def export_to_csv(request, db_query):
         row = get_row(event, user_data, columns)
         writer.writerow(row)
 
+        # Write data from buffer, clear the buffer
+        # and drain chunk to network
         response.write(buffer.getvalue().encode('utf-8'))
+        buffer.truncate(0)
+        buffer.seek(0)
         await response.drain()
 
     buffer.close()

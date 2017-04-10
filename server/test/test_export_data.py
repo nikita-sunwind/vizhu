@@ -5,7 +5,7 @@
 
 from csv import DictReader
 from pytest import mark
-from test.utils import EVENTS_URL, BAD_DATA
+from test.utils import EVENTS_URL, BAD_DATA, N_TEST_EVENTS
 
 
 @mark.usefixtures('fx_load_fixtures')
@@ -42,6 +42,7 @@ class TestExportData:
 
         results = await response.json()
         assert isinstance(results, list)
+        assert len(results) == N_TEST_EVENTS
 
         for row in results:
             for key in self.test_keys:
@@ -59,10 +60,12 @@ class TestExportData:
         assert response.status == 200
         assert response.headers['Content-Type'] == 'text/csv'
 
-        results = await response.text()
-        assert isinstance(results, str)
+        text = await response.text()
+        results = text.splitlines()
+        assert isinstance(results, list)
+        assert len(results) == N_TEST_EVENTS + 1
 
-        reader = DictReader(results.splitlines())
+        reader = DictReader(results)
         for index, row in enumerate(reader):
             for key in self.test_keys:
                 assert key in row

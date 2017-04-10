@@ -12,6 +12,7 @@ EVENTS_URL = '/events'
 RESTART_URL = '/restart'
 
 BAD_DATA = r'#!,;{}[]. \n""\'/'
+N_TEST_EVENTS = 1000
 CONTENT_TYPE = {'Content-Type': 'application/json'}
 
 

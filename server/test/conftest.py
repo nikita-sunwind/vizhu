@@ -10,7 +10,7 @@ from uuid import uuid4
 from pytest import fixture
 from src.models import Event
 from src.server import create_app
-from test.utils import BAD_DATA
+from test.utils import BAD_DATA, N_TEST_EVENTS
 
 
 @fixture
@@ -27,7 +27,7 @@ def fx_load_fixtures(fx_client):
     session = fx_client.server.app['Session']()
 
     timestamp = time()
-    for _ in range(1000):
+    for _ in range(N_TEST_EVENTS):
         event = Event(
             _id=str(uuid4()),
             _series='demo',
