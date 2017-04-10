@@ -2,13 +2,14 @@
 '''
 
 import time
+from multidict import MultiDict
 from requests import exceptions, get
 import src.settings as settings
 
 
 SERVER_URL = 'http://localhost:{}'.format(settings.SERVER_PORT)
-EVENTS_URL = '{}/events'.format(SERVER_URL)
-RESTART_URL = '{}/restart'.format(SERVER_URL)
+EVENTS_URL = '/events'
+RESTART_URL = '/restart'
 
 CONTENT_TYPE = {'Content-Type': 'application/json'}
 
@@ -36,3 +37,17 @@ def unzip_test_cases(test_cases):
     argvalues = [test_case[1:] for test_case in test_cases]
 
     return (ids, argvalues)
+
+
+def params_to_multidict(params):
+    '''Convert params to MultiDict
+    '''
+    multi_params = MultiDict()
+    for key, value in params.items():
+        if isinstance(params[key], list):
+            for value in params[key]:
+                multi_params.add(key, value)
+        else:
+            multi_params.add(key, value)
+
+    return multi_params

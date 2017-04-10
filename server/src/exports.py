@@ -49,6 +49,7 @@ async def export_to_json(request, db_query):
 
     # Stream response, send data in chuncks - one event per chunk
     response = web.StreamResponse(status=200)
+    response.content_type = 'application/json'
     await response.prepare(request)
 
     response.write('['.encode('utf-8'))
@@ -79,6 +80,7 @@ async def export_to_csv(request, db_query):
 
     # Stream response, send data in chuncks - one event per chunk
     response = web.StreamResponse(status=200)
+    response.content_type = 'text/csv'
     await response.prepare(request)
 
     for position, event in enumerate(db_query):

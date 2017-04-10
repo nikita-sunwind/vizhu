@@ -7,11 +7,9 @@ from json import dumps
 from time import time
 from uuid import uuid4
 from pytest import mark
-from requests import post
 from test.utils import EVENTS_URL, unzip_test_cases
 
 
-@mark.usefixtures('fx_api_server')
 class TestLoadData:
     '''Load event data to the server
     '''
@@ -80,16 +78,16 @@ class TestLoadData:
     ids, argvalues = unzip_test_cases(action_cases)
 
     @mark.parametrize('payload,code,message', argvalues, ids=ids)
-    def test_load_event(self, payload, code, message):
+    async def test_load_event(self, fx_client, payload, code, message):
 
         if payload:
             data = dumps(payload)
         else:
             data = None
 
-        response = post(EVENTS_URL, data=data)
+        response = await fx_client.post(EVENTS_URL, data=data)
 
-        assert response.status_code == code
+        assert response.status == code
 
         if message:
-            assert response.text == message
+            assert await response.text() == message

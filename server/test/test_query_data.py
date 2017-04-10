@@ -7,11 +7,9 @@ from json import dumps
 from time import time
 from uuid import uuid4
 from pytest import mark
-from requests import get, post
-from test.utils import EVENTS_URL, unzip_test_cases
+from test.utils import EVENTS_URL, params_to_multidict, unzip_test_cases
 
 
-@mark.usefixtures('fx_api_server')
 class TestQueryData:
     '''Query event data from the server
     '''
@@ -22,10 +20,10 @@ class TestQueryData:
          {
              'format': 'json',
              'id': str(uuid4()),
-             'series': 'series-{}'.format(str(uuid4())),
-             'agent': 'agent-{}'.format(str(uuid4())),
-             'since': time() - 1000,
-             'till': time() + 1000,
+             'series': 'series-{}'.format(uuid4()),
+             'agent': 'agent-{}'.format(uuid4()),
+             'since': str(time() - 1000),
+             'till': str(time() + 1000),
              'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
@@ -48,7 +46,7 @@ class TestQueryData:
 
         ('can-query-data-by-series',
          {
-             'series': 'series-{}'.format(str(uuid4())),
+             'series': 'series-{}'.format(uuid4()),
              'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
@@ -56,7 +54,7 @@ class TestQueryData:
 
         ('can-query-data-by-agent',
          {
-             'agent': 'agent-{}'.format(str(uuid4())),
+             'agent': 'agent-{}'.format(uuid4()),
              'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
@@ -64,8 +62,8 @@ class TestQueryData:
 
         ('can-query-data-by-time-period',
          {
-             'since': time() - 1000,
-             'till': time() + 1000,
+             'since': str(time() - 1000),
+             'till': str(time() + 1000),
              'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
@@ -73,7 +71,7 @@ class TestQueryData:
 
         ('can-query-data-by-time-since',
          {
-             'since': time() - 1000,
+             'since': str(time() - 1000),
              'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
@@ -81,7 +79,7 @@ class TestQueryData:
 
         ('can-query-data-by-time-till',
          {
-             'till': time() + 1000,
+             'till': str(time() + 1000),
              'columns': ['_id', '_timestamp', 'roundtrip_delay'],
          },
          200,
@@ -99,7 +97,7 @@ class TestQueryData:
     ids, argvalues = unzip_test_cases(action_cases)
 
     @mark.parametrize('params,code,message', argvalues, ids=ids)
-    def test_can_query_data(self, params, code, message):
+    async def test_can_query_data(self, fx_client, params, code, message):
 
         event_id = params.get('id', str(uuid4()))
 
@@ -111,17 +109,21 @@ class TestQueryData:
             'roundtrip_delay': 0.001,
         }
 
-        response = post(EVENTS_URL, data=dumps(payload))
-        assert response.status_code == 200
+        response = await fx_client.post(
+            EVENTS_URL, data=dumps(payload))
 
-        response = get(EVENTS_URL, params=params)
-        assert response.status_code == code
+        assert response.status == 200
+
+        response = await fx_client.get(
+            EVENTS_URL, params=params_to_multidict(params))
+
+        assert response.status == code
 
         if message:
-            assert response.text == message
+            assert await response.text() == message
             return
 
-        results = response.json()
+        results = await response.json()
         assert isinstance(results, list)
 
         # Our newly loaded event should be present in results

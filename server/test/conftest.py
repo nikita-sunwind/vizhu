@@ -3,22 +3,45 @@
 '''Pytest fixture definitions
 '''
 
-import subprocess
-from pytest import yield_fixture
-from test.utils import SERVER_URL, wait_for_server
+from json import dumps
+from random import random
+from time import time
+from uuid import uuid4
+from pytest import fixture
+from src.models import Event
+from src.server import create_app
 
 
-@yield_fixture(scope='session')
-def fx_api_server():
-    '''Start HTTP REST API server
+@fixture
+def fx_app():
+    '''Initialize web application
     '''
-    args = ['python', '-m', 'src.server']
-    devnull = open('/dev/null', 'w')
-    server = subprocess.Popen(args, stdout=devnull)
-    wait_for_server(SERVER_URL)
+    return create_app()
 
-    yield
 
-    # Release resources
-    server.terminate()
-    devnull.close()
+@fixture
+def fx_client(loop, test_client):
+    '''Create test client
+    '''
+    return loop.run_until_complete(test_client(create_app))
+
+
+@fixture(scope='session')
+def fx_load_fixtures(fx_app):
+    '''Load fixture data into the database
+    '''
+    session = fx_app['Session']()
+
+    timestamp = time()
+    for _ in range(1000):
+        event = Event(
+            _id=str(uuid4()),
+            _series='demo',
+            _agent='Smith',
+            _timestamp=timestamp,
+            _data=dumps({'roundtrip_delay': random()}))
+
+        session.add(event)
+        timestamp += 0.1
+
+    session.commit()

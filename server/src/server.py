@@ -10,13 +10,13 @@ from .settings import SERVER_PORT
 from .signal_handlers import setup_signal_handlers
 
 
-def init_app():
-    '''Initialize server application
+def create_app(loop=asyncio.get_event_loop()):
+    '''Initialize web application
     '''
-    app = web.Application(loop=asyncio.get_event_loop())
-
     if 'DEBUG' in os.environ:
         setup_loggers()
+
+    app = web.Application(loop=loop)
 
     setup_routes(app)
     setup_signal_handlers(app)
@@ -25,4 +25,4 @@ def init_app():
 
 
 if __name__ == '__main__':
-    web.run_app(init_app(), host='localhost', port=SERVER_PORT)
+    web.run_app(create_app(), host='localhost', port=SERVER_PORT)

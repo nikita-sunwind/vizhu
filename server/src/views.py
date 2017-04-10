@@ -8,10 +8,10 @@ from json.decoder import JSONDecodeError
 from time import time
 from uuid import uuid4
 from aiohttp import web
+from .database import create_log
 from .exports import export_to_json, export_to_csv
 from .models import Event
 from .settings import STATIC_DIR
-from .signal_handlers import init_db
 
 
 async def index(_):
@@ -69,7 +69,7 @@ async def load_event(request):
     session.add(event)
     session.commit()
 
-    return web.Response(status=200)
+    return web.Response(status=200, content_type='application/json')
 
 
 async def query_events(request):
@@ -116,10 +116,14 @@ async def restart(request):
     try:
         user_data = await request.json()
     except JSONDecodeError:
-        session_name = 'unnamed'
+        log_name = 'unnamed'
     else:
-        session_name = user_data.get('_name', 'unnamed')
+        log_name = user_data.get('_name', 'unnamed')
 
-    timestamp = await init_db(request.app, session_name=session_name)
+    Session, timestamp = await create_log(log_name)
+    request.app['Session'] = Session
 
-    return web.Response(status=200, text=dumps({'_timestamp': timestamp}))
+    return web.Response(
+        status=200,
+        text=dumps({'_timestamp': timestamp}),
+        content_type='application/json')

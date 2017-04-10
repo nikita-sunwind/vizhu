@@ -1,32 +1,14 @@
 '''Signal handlers
 '''
 
-import os
-from time import time
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from .models import Base
-from .settings import DATA_DIR
+from .database import create_log
 
 
-async def init_db(app, session_name='unnamed'):
-    '''Configure database engine, create or update database structure
-    and initialize ORM session maker
+async def init_db(app):
+    '''Initialize database
     '''
-    timestamp = '{:.6f}'.format(time())
-    db_filename = '{}_{}.sqlite3'.format(timestamp, session_name)
-    db_path = DATA_DIR / db_filename
-
-    debug_mode = 'DEBUG' in os.environ
-    engine = create_engine('sqlite:///{}'.format(db_path), echo=debug_mode)
-    Base.metadata.create_all(engine)
-
-    Session = sessionmaker(bind=engine)
-
-    app['engine'] = engine
+    Session, _ = await create_log('unnamed')
     app['Session'] = Session
-
-    return timestamp
 
 
 def setup_signal_handlers(app):
