@@ -11,6 +11,7 @@ SERVER_URL = 'http://localhost:{}'.format(settings.SERVER_PORT)
 EVENTS_URL = '/events'
 RESTART_URL = '/restart'
 
+BAD_DATA = r'#!,;{}[]. \n""\'/'
 CONTENT_TYPE = {'Content-Type': 'application/json'}
 
 

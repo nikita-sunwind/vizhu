@@ -3,6 +3,9 @@
 '''Export event data to different output formats
 '''
 
+from collections import OrderedDict
+from csv import DictWriter
+from io import StringIO
 from json import dumps, loads
 from aiohttp import web
 from .models import Event
@@ -23,7 +26,6 @@ def get_columns(request, user_data):
         return selected_columns
     else:
         existing_columns = set(EVENT_ATTRS) | set(user_data.keys())
-        print('====================EC', existing_columns, user_data)
         return existing_columns
 
 
@@ -31,7 +33,7 @@ def get_row(event, user_data, columns):
     '''Return flat dictionary with row values
     '''
 
-    row = dict()
+    row = OrderedDict()
     for column in columns:
         if column in EVENT_ATTRS:
             # Columns from reserved fields
@@ -85,22 +87,23 @@ async def export_to_csv(request, db_query):
 
     for position, event in enumerate(db_query):
 
+        buffer = StringIO()
         user_data = loads(event._data)
 
         # For CSV we have to output the same columns set for all rows
         if position == 0:
             columns = get_columns(request, user_data)
+            writer = DictWriter(buffer, fieldnames=columns)
 
             # Write column names
-            column_names = ','.join(columns) + ';'
-            response.write(column_names.encode('utf-8'))
+            writer.writeheader()
 
         # Write row values
         row = get_row(event, user_data, columns)
-        strings = (str(value) for value in row.values())
-        row_values = ','.join(strings) + ';'
-        response.write(row_values.encode('utf-8'))
+        writer.writerow(row)
 
+        response.write(buffer.getvalue().encode('utf-8'))
         await response.drain()
 
+    buffer.close()
     return response
