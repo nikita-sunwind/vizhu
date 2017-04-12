@@ -42,6 +42,20 @@ class TestRestartLogging:
          200,
          None),
 
+        ('name-should-not-contain-forward-slash',
+         {
+             '_name': '../.'
+         },
+         400,
+         'volume name must be a valid filename'),
+
+        ('name-should-not-contain-backslash',
+         {
+             '_name': '..\\.'
+         },
+         400,
+         'volume name must be a valid filename'),
+
     ]
 
     ids, argvalues = unzip_test_cases(action_cases)

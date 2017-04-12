@@ -120,6 +120,10 @@ async def restart(request):
     else:
         volume_name = user_data.get('_name', 'unnamed')
 
+    if '\\' in volume_name or '/' in volume_name:
+        return web.Response(
+            status=400, text='volume name must be a valid filename')
+
     request.app['Session'] = create_volume(volume_name)
 
     return web.Response(status=200, content_type='application/json')
