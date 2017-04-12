@@ -60,9 +60,10 @@ class TestExportData:
         assert response.status == 200
         assert response.headers['Content-Type'] == 'text/csv'
 
-        text = await response.text()
-        results = text.splitlines()
-        assert isinstance(results, list)
+        results = list()
+        async for line in response.content:
+            results.append(line.decode('utf-8'))
+
         assert len(results) == N_TEST_EVENTS + 1
 
         reader = DictReader(results)

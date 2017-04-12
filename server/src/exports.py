@@ -11,6 +11,8 @@ from aiohttp import web
 from .models import Event
 
 
+DATABASE_PAGESIZE = 1000
+NETWORK_PAGESIZE = 100
 EVENT_ATTRS = Event.__mapper__.attrs.keys()
 EVENT_ATTRS.remove('_data')
 
@@ -45,17 +47,31 @@ def get_row(event, user_data, columns):
     return row
 
 
+def page_query(db_query):
+    '''DB query pagination: Request huge amount of rows in separate chunks
+    '''
+    offset = 0
+    while True:
+        results = False
+        for item in db_query.limit(DATABASE_PAGESIZE).offset(offset):
+            results = True
+            yield item
+        if not results:
+            break
+        offset += DATABASE_PAGESIZE
+
+
 async def export_to_json(request, db_query):
     '''Export event data to JSON as stream HTTP response
     '''
 
-    # Stream response, send data in chuncks - one event per chunk
+    # Stream response, send data in chuncks
     response = web.StreamResponse(status=200)
     response.content_type = 'application/json'
     await response.prepare(request)
 
     response.write('['.encode('utf-8'))
-    for position, event in enumerate(db_query):
+    for position, event in enumerate(page_query(db_query)):
 
         # Delimiter between JSON array items
         if position > 0:
@@ -68,7 +84,9 @@ async def export_to_json(request, db_query):
         row = get_row(event, user_data, columns)
         response.write(dumps(row).encode('utf-8'))
 
-        await response.drain()
+        if position % NETWORK_PAGESIZE == NETWORK_PAGESIZE - 1:
+            # Drain response chunk
+            await response.drain()
 
     response.write(']'.encode('utf-8'))
     await response.drain()
@@ -80,18 +98,18 @@ async def export_to_csv(request, db_query):
     '''Export event data to CSV as stream HTTP response
     '''
 
-    # Stream response, send data in chuncks - one event per chunk
+    # Stream response, send data in chuncks
     response = web.StreamResponse(status=200)
     response.content_type = 'text/csv'
     await response.prepare(request)
 
-    for position, event in enumerate(db_query):
+    buffer = StringIO()
+    for position, event in enumerate(page_query(db_query)):
 
         user_data = loads(event._data)
 
         # For CSV we have to output the same columns set for all rows
         if position == 0:
-            buffer = StringIO()
             columns = get_columns(request, user_data)
             writer = DictWriter(buffer, fieldnames=columns)
 
@@ -102,12 +120,16 @@ async def export_to_csv(request, db_query):
         row = get_row(event, user_data, columns)
         writer.writerow(row)
 
-        # Write data from buffer, clear the buffer
-        # and drain chunk to network
-        response.write(buffer.getvalue().encode('utf-8'))
-        buffer.truncate(0)
-        buffer.seek(0)
-        await response.drain()
+        if position % NETWORK_PAGESIZE == NETWORK_PAGESIZE - 1:
+            # Write data from temporary buffer to response
+            response.write(buffer.getvalue().encode('utf-8'))
+
+            # Clear temporary buffer and drain response chunk
+            buffer.truncate(0)
+            buffer.seek(0)
+            await response.drain()
 
     buffer.close()
+    await response.drain()
+
     return response
