@@ -1,9 +1,14 @@
 '''Utility functions for test suit
 '''
 
-import time
+from json import dumps
+from random import random
+from time import sleep, time
+from uuid import uuid4
 from multidict import MultiDict
 from requests import exceptions, get
+from src.exports import DATABASE_PAGESIZE
+from src.models import Event
 import src.settings as settings
 
 
@@ -13,7 +18,6 @@ RESTART_URL = '/restart'
 
 BAD_DATA = r'#!,;{}[]. \n""\'/'
 N_TEST_EVENTS = 1000
-CONTENT_TYPE = {'Content-Type': 'application/json'}
 
 
 def wait_for_server(url):
@@ -25,7 +29,7 @@ def wait_for_server(url):
         except exceptions.ConnectionError:
             print('Server at {} is not ready, sleeping for 1 second...'.format(
                 url))
-            time.sleep(1)
+            sleep(1)
         else:
             break
 
@@ -53,3 +57,27 @@ def params_to_multidict(params):
             multi_params.add(key, value)
 
     return multi_params
+
+
+def generate_events(db_session, n_events):
+    '''Generate random events and insert them into the database
+    '''
+    timestamp = time()
+    for position in range(n_events):
+        event = Event(
+            _id=str(uuid4()),
+            _series='demo',
+            _agent='Smith',
+            _timestamp=timestamp + random(),
+            _data=dumps({
+                'roundtrip_delay': random(),
+                'bad_data': BAD_DATA,
+            }))
+
+        db_session.add(event)
+        timestamp += 0.1
+
+        if position % DATABASE_PAGESIZE == DATABASE_PAGESIZE - 1:
+            db_session.commit()
+
+    db_session.commit()

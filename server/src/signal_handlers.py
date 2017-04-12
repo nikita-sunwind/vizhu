@@ -1,14 +1,13 @@
 '''Signal handlers
 '''
 
-from .database import create_log
+from .database import create_volume
 
 
 async def init_db(app):
     '''Initialize database
     '''
-    Session, _ = await create_log('unnamed')
-    app['Session'] = Session
+    app['Session'] = create_volume('default')
 
 
 def setup_signal_handlers(app):

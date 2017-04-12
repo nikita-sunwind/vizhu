@@ -4,7 +4,7 @@
 '''
 
 from json import dumps
-from uuid import uuid4
+from pathlib import Path
 from pytest import mark
 import src.settings as settings
 from test.utils import RESTART_URL, unzip_test_cases
@@ -23,14 +23,14 @@ class TestRestartLogging:
 
         ('can-restart-session-with-name',
          {
-             '_name': 'session-{}'.format(uuid4()),
+             '_name': 'test',
          },
          200,
          None),
 
         ('unknown-fields-are-ignored',
          {
-             '_name': 'session-{}'.format(uuid4()),
+             '_name': 'test',
              'weird': 'things',
          },
          200,
@@ -47,7 +47,16 @@ class TestRestartLogging:
     ids, argvalues = unzip_test_cases(action_cases)
 
     @mark.parametrize('payload,code,message', argvalues, ids=ids)
-    async def test_can_query_data(self, fx_client, payload, code, message):
+    async def test_restart_logging(self, fx_client, payload, code, message):
+
+        if payload:
+            volume_name = payload.get('_name', 'unnamed')
+        else:
+            volume_name = 'unnamed'
+
+        n_old_volumes = len([
+            volume for volume in
+            Path(settings.DATA_DIR).glob('{}*.sqlite3'.format(volume_name))])
 
         if payload:
             data = dumps(payload)
@@ -61,17 +70,13 @@ class TestRestartLogging:
             assert await response.text() == message
             return
 
-        result = await response.json()
-        assert isinstance(result, dict)
-        assert '_timestamp' in result
+        db_filename = '{}.sqlite3'.format(volume_name)
+        volume_path = Path(settings.DATA_DIR / db_filename)
 
-        timestamp = result['_timestamp']
-        if payload:
-            log_name = payload.get('_name', 'unnamed')
-        else:
-            log_name = 'unnamed'
+        assert volume_path.is_file()
 
-        db_filename = '{}_{}.sqlite3'.format(timestamp, log_name)
-        db_path = settings.DATA_DIR / db_filename
+        n_new_volumes = len([
+            volume for volume in
+            Path(settings.DATA_DIR).glob('{}*.sqlite3'.format(volume_name))])
 
-        assert db_path.is_file()
+        assert n_new_volumes == n_old_volumes + 1

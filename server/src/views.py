@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 from time import time
 from uuid import uuid4
 from aiohttp import web
-from .database import create_log
+from .database import create_volume
 from .exports import export_to_json, export_to_csv
 from .models import Event
 from .settings import STATIC_DIR
@@ -116,14 +116,10 @@ async def restart(request):
     try:
         user_data = await request.json()
     except JSONDecodeError:
-        log_name = 'unnamed'
+        volume_name = 'unnamed'
     else:
-        log_name = user_data.get('_name', 'unnamed')
+        volume_name = user_data.get('_name', 'unnamed')
 
-    Session, timestamp = await create_log(log_name)
-    request.app['Session'] = Session
+    request.app['Session'] = create_volume(volume_name)
 
-    return web.Response(
-        status=200,
-        text=dumps({'_timestamp': timestamp}),
-        content_type='application/json')
+    return web.Response(status=200, content_type='application/json')

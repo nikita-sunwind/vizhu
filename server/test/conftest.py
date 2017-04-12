@@ -3,15 +3,9 @@
 '''Pytest fixture definitions
 '''
 
-from json import dumps
-from random import random
-from time import time
-from uuid import uuid4
 from pytest import fixture
-from src.exports import DATABASE_PAGESIZE
-from src.models import Event
 from src.server import create_app
-from test.utils import BAD_DATA, N_TEST_EVENTS
+from test.utils import N_TEST_EVENTS, generate_events
 
 
 @fixture
@@ -26,23 +20,4 @@ def fx_load_fixtures(fx_client):
     '''Load fixture data into the database
     '''
     session = fx_client.server.app['Session']()
-
-    timestamp = time()
-    for position in range(N_TEST_EVENTS):
-        event = Event(
-            _id=str(uuid4()),
-            _series='demo',
-            _agent='Smith',
-            _timestamp=timestamp,
-            _data=dumps({
-                'roundtrip_delay': random(),
-                'bad_data': BAD_DATA,
-            }))
-
-        session.add(event)
-        timestamp += 0.1
-
-        if position % DATABASE_PAGESIZE == DATABASE_PAGESIZE - 1:
-            session.commit()
-
-    session.commit()
+    generate_events(session, N_TEST_EVENTS)
