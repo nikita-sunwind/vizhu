@@ -5,7 +5,7 @@
 
 from collections import OrderedDict
 from csv import DictWriter
-from io import StringIO
+from io import TextIOWrapper
 from json import dumps, loads
 from aiohttp import web
 from .models import Event
@@ -15,6 +15,43 @@ DATABASE_PAGESIZE = 1000
 NETWORK_PAGESIZE = 100
 EVENT_ATTRS = Event.__mapper__.attrs.keys()
 EVENT_ATTRS.remove('_data')
+
+
+class IOStreamResponse(web.StreamResponse):
+    '''Adapter for StreamResponse to IOBase interface
+    '''
+
+    closed = False
+
+    @staticmethod
+    def readable():
+        '''Dummy for IOBase.readable(): always return False
+        '''
+        return False
+
+    @staticmethod
+    def writable():
+        '''Dummy for IOBase.writable(): always return True
+        '''
+        return True
+
+    @staticmethod
+    def seekable():
+        '''Dummy for IOBase.seekable(): always return False
+        '''
+        return False
+
+    @staticmethod
+    def close():
+        '''Dummy for IOBase.close(): do nothing
+        '''
+        pass
+
+    @staticmethod
+    def flush():
+        '''Dummy for IOBase.flush(): do nothing
+        '''
+        pass
 
 
 def get_columns(request, user_data):
@@ -66,29 +103,33 @@ async def export_to_json(request, db_query):
     '''
 
     # Stream response, send data in chuncks
-    response = web.StreamResponse(status=200)
+    response = IOStreamResponse(status=200)
     response.content_type = 'application/json'
     await response.prepare(request)
 
-    response.write('['.encode('utf-8'))
+    iowrapper = TextIOWrapper(response, encoding='utf-8')
+
+    iowrapper.write('[')
     for position, event in enumerate(page_query(db_query)):
 
         # Delimiter between JSON array items
         if position > 0:
-            response.write(','.encode('utf-8'))
+            iowrapper.write(',')
 
         user_data = loads(event._data)
         columns = get_columns(request, user_data)
 
         # Write row as JSON object
         row = get_row(event, user_data, columns)
-        response.write(dumps(row).encode('utf-8'))
+        iowrapper.write(dumps(row))
 
         if position % NETWORK_PAGESIZE == NETWORK_PAGESIZE - 1:
             # Drain response chunk
             await response.drain()
 
-    response.write(']'.encode('utf-8'))
+    iowrapper.write(']')
+
+    iowrapper.close()
     await response.drain()
 
     return response
@@ -99,11 +140,12 @@ async def export_to_csv(request, db_query):
     '''
 
     # Stream response, send data in chuncks
-    response = web.StreamResponse(status=200)
+    response = IOStreamResponse(status=200)
     response.content_type = 'text/csv'
     await response.prepare(request)
 
-    buffer = StringIO()
+    iowrapper = TextIOWrapper(response, encoding='utf-8')
+
     for position, event in enumerate(page_query(db_query)):
 
         user_data = loads(event._data)
@@ -111,7 +153,7 @@ async def export_to_csv(request, db_query):
         # For CSV we have to output the same columns set for all rows
         if position == 0:
             columns = get_columns(request, user_data)
-            writer = DictWriter(buffer, fieldnames=columns)
+            writer = DictWriter(iowrapper, fieldnames=columns)
 
             # Write column names
             writer.writeheader()
@@ -121,15 +163,10 @@ async def export_to_csv(request, db_query):
         writer.writerow(row)
 
         if position % NETWORK_PAGESIZE == NETWORK_PAGESIZE - 1:
-            # Write data from temporary buffer to response
-            response.write(buffer.getvalue().encode('utf-8'))
-
-            # Clear temporary buffer and drain response chunk
-            buffer.truncate(0)
-            buffer.seek(0)
+            # Drain response chunk
             await response.drain()
 
-    buffer.close()
+    iowrapper.close()
     await response.drain()
 
     return response
