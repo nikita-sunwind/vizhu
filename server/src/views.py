@@ -5,13 +5,16 @@
 
 from json import dumps
 from json.decoder import JSONDecodeError
+from pathlib import Path
 from time import time
 from uuid import uuid4
 from aiohttp import web
 from .database import create_volume
 from .exports import export_to_json, export_to_csv
 from .models import Event
-from .settings import STATIC_DIR
+
+
+STATIC_DIR = Path.cwd().parent / 'client' / 'dist'
 
 
 async def index(_):

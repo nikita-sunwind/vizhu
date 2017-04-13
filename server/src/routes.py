@@ -1,8 +1,7 @@
 '''Server routing
 '''
 
-from .settings import STATIC_DIR
-from .views import index, load_event, query_events, restart
+from .views import STATIC_DIR, index, load_event, query_events, restart
 
 
 def setup_routes(app):
