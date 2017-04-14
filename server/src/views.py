@@ -72,7 +72,8 @@ async def load_event(request):
     session.add(event)
     session.commit()
 
-    return web.Response(status=200, content_type='application/json')
+    return web.Response(
+        status=200, content_type='application/json', text=dumps({'_id': _id}))
 
 
 async def query_events(request):

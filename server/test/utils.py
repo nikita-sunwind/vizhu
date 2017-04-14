@@ -3,37 +3,19 @@
 
 from json import dumps
 from random import random
-from time import sleep, time
+from time import time
 from uuid import uuid4
 from multidict import MultiDict
-from requests import exceptions, get
 from src.exports import DATABASE_PAGESIZE
 from src.models import Event
-import src.settings as settings
 
 
-SERVER_URL = 'http://localhost:{}'.format(settings.SERVER_PORT)
 EVENTS_URL = '/events'
 RESTART_URL = '/restart'
 
 BAD_DATA = r'#!,;{}[]. \n""\'/'
+COMPOUND_DATA = ['a', 2, .3, None, BAD_DATA, {'b': ['c', 'd', 'e']}]
 N_TEST_EVENTS = 1000
-
-
-def wait_for_server(url):
-    '''Simple function for waiting for HTTP API server readiness
-    '''
-    for _ in range(100):
-        try:
-            get(url)
-        except exceptions.ConnectionError:
-            print('Server at {} is not ready, sleeping for 1 second...'.format(
-                url))
-            sleep(1)
-        else:
-            break
-
-    print('Server at {} is ready'.format(url))
 
 
 def unzip_test_cases(test_cases):
@@ -72,6 +54,7 @@ def generate_events(db_session, n_events):
             _data=dumps({
                 'roundtrip_delay': random(),
                 'bad_data': BAD_DATA,
+                'compound_data': COMPOUND_DATA,
             }))
 
         db_session.add(event)

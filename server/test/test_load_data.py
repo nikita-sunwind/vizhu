@@ -7,7 +7,7 @@ from json import dumps
 from time import time
 from uuid import uuid4
 from pytest import mark
-from test.utils import EVENTS_URL, unzip_test_cases
+from test.utils import COMPOUND_DATA, EVENTS_URL, unzip_test_cases
 
 
 class TestLoadData:
@@ -73,6 +73,15 @@ class TestLoadData:
          400,
          'request body is not a valid JSON text'),
 
+        ('can-load-event-with-compound-fields',
+         {
+             '_series': 'demo',
+             '_agent': 'Smith',
+             'my_values': COMPOUND_DATA,
+         },
+         200,
+         None),
+
     ]
 
     ids, argvalues = unzip_test_cases(action_cases)
@@ -86,8 +95,21 @@ class TestLoadData:
             data = None
 
         response = await fx_client.post(EVENTS_URL, data=data)
-
         assert response.status == code
 
         if message:
             assert await response.text() == message
+            return
+
+        received = await response.json()
+        assert '_id' in received
+
+        event_id = received['_id']
+
+        response = await fx_client.get(EVENTS_URL, params={'_id': event_id})
+        assert response.status == 200
+
+        received = await response.json()
+        for key, value in payload.items():
+            assert key in received[0]
+            assert received[0][key] == value

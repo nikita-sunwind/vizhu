@@ -7,7 +7,7 @@ from csv import DictReader
 from io import BytesIO
 import numpy as np
 from pytest import mark
-from test.utils import EVENTS_URL, BAD_DATA, N_TEST_EVENTS
+from test.utils import EVENTS_URL, BAD_DATA, COMPOUND_DATA, N_TEST_EVENTS
 
 
 @mark.usefixtures('fx_load_fixtures')
@@ -17,7 +17,7 @@ class TestExportData:
 
     test_keys = [
         '_id', '_series', '_agent', '_timestamp',
-        'roundtrip_delay', 'bad_data']
+        'roundtrip_delay', 'bad_data', 'compound_data']
 
     async def test_export_data_default_format(self, fx_client):
 
@@ -49,6 +49,8 @@ class TestExportData:
         for row in results:
             for key in self.test_keys:
                 assert key in row
+            assert row['bad_data'] == BAD_DATA
+            assert row['compound_data'] == COMPOUND_DATA
 
     async def test_export_data_to_csv(self, fx_client):
 
@@ -74,6 +76,7 @@ class TestExportData:
                 assert key in row
             if index > 0:
                 assert row['bad_data'] == BAD_DATA
+                assert row['compound_data'] == str(COMPOUND_DATA)
 
     async def test_export_data_to_numpy(self, fx_client):
 
@@ -95,4 +98,12 @@ class TestExportData:
         buffer.seek(0)
         result = np.load(buffer)
 
-        assert result.shape == (N_TEST_EVENTS, 6)
+        assert result.shape == (N_TEST_EVENTS, len(self.test_keys))
+
+        for row in result:
+            assert BAD_DATA in row
+            for cell in row:
+                if cell == COMPOUND_DATA:
+                    break
+            else:
+                assert False

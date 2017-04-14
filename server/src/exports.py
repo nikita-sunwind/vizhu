@@ -207,7 +207,7 @@ async def export_to_numpy(request, db_query):
         if len(buffer) > 0:
             output = np.append(output, buffer, axis=0)
 
-        np.save(response, output, allow_pickle=False)
+        np.save(response, output)
 
     await response.drain()
 
