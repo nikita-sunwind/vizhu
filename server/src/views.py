@@ -10,7 +10,7 @@ from time import time
 from uuid import uuid4
 from aiohttp import web
 from .database import create_volume
-from .exports import export_to_json, export_to_csv
+from .exports import export_to_json, export_to_csv, export_to_numpy
 from .models import Event
 
 
@@ -105,6 +105,8 @@ async def query_events(request):
         response = await export_to_json(request, db_query)
     elif export_format == 'csv':
         response = await export_to_csv(request, db_query)
+    elif export_format == 'numpy':
+        response = await export_to_numpy(request, db_query)
     else:
         return web.Response(
             status=400,

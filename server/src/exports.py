@@ -8,11 +8,13 @@ from csv import DictWriter
 from io import TextIOWrapper
 from json import dumps, loads
 from aiohttp import web
+import numpy as np
 from .models import Event
 
 
 DATABASE_PAGESIZE = 1000
 NETWORK_PAGESIZE = 100
+NUMPY_PAGESIZE = 1000
 EVENT_ATTRS = Event.__mapper__.attrs.keys()
 EVENT_ATTRS.remove('_data')
 
@@ -167,6 +169,46 @@ async def export_to_csv(request, db_query):
             await response.drain()
 
     iowrapper.close()
+    await response.drain()
+
+    return response
+
+
+async def export_to_numpy(request, db_query):
+    '''Export event data to Numpy serialization format as stream HTTP response
+    '''
+
+    # Stream response, send data in chuncks
+    response = IOStreamResponse(status=200)
+    response.content_type = 'application/octet-stream'
+    await response.prepare(request)
+
+    buffer = list()
+    output = None
+    for position, event in enumerate(page_query(db_query)):
+
+        user_data = loads(event._data)
+
+        # For numpy we have to output the same columns set for all rows
+        if position == 0:
+            columns = get_columns(request, user_data)
+            output = np.empty((0, len(columns)))
+
+        # Append row to temporary buffer
+        row = get_row(event, user_data, columns)
+        buffer.append(list(row.values()))
+
+        if position % NUMPY_PAGESIZE == NUMPY_PAGESIZE - 1:
+            # Append chunk to numpy array
+            output = np.append(output, buffer, axis=0)
+            buffer = list()
+
+    if output is not None:
+        if len(buffer) > 0:
+            output = np.append(output, buffer, axis=0)
+
+        np.save(response, output, allow_pickle=False)
+
     await response.drain()
 
     return response
